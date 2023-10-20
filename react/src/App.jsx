@@ -1,10 +1,7 @@
 // JSX
-import { useState } from "react";
-
-// Product Images
-import firstProduct from "./assets/img/cart/1.jpg";
-import secondProduct from "./assets/img/cart/2.jpg";
-import thirdProduct from "./assets/img/cart/3.jpg";
+import {useEffect, useState} from "react";
+import { useStateContext } from "./contexts/ContextProvider.jsx";
+import axiosClient from "../axios-client.js";
 // Logo Images
 import secondLogo from "./assets/img/logo/2.png";
 import eighteenBanner from "./assets/img/banner/18.jpg";
@@ -13,41 +10,125 @@ import bgImage from "./assets/img/bg/breadcrumb.jpg";
 import bgImage1 from "./assets/img/bg/1.jpg";
 
 function App() {
+    const {user, token, setToken, setUser} = useStateContext()
     const [basket, setBasket] = useState([
-        {
-            id: 1,
-            name: "Blue Coat Dress",
-            asset: firstProduct,
-            price: 165.00,
-            quantity: 1
-        }, {
-            id: 2,
-            name: "Blue Shirt",
-            asset: secondProduct,
-            price: 150.00,
-            quantity: 1
-        } , {
-            id: 3,
-            name: "Green Waistcoat",
-            asset: thirdProduct,
-            price: 150.00,
-            quantity: 1
-        }
+        // {
+        //     id: 1,
+        //     name: "Blue Coat Dress",
+        //     asset: firstProduct,
+        //     price: 165.00,
+        //     quantity: 1
+        // }, {
+        //     id: 2,
+        //     name: "Blue Shirt",
+        //     asset: secondProduct,
+        //     price: 150.00,
+        //     quantity: 1
+        // } , {
+        //     id: 3,
+        //     name: "Green Waistcoat",
+        //     asset: thirdProduct,
+        //     price: 150.00,
+        //     quantity: 1
+        // }
     ]);
 
-    const handleRemoveItem = (id) => {
+    // Basket Functions
+    const handleRemoveItem = (ev, id) => {
+        ev.preventDefault();
         const filteredArray = basket.filter(item => item.id !== id);
-        setBasket(filteredArray);
+        axiosClient.delete(`/deleteBasket/${id}`).then(
+            ({data}) => {
+                if(data === 1) {
+                    setBasket(filteredArray);
+                }
+            }
+        ).catch(
+            (err) => {
+                console.error(err);
+            }
+        )
     };
     const handleChangeQuantity = (ev, id) => {
-        const updatedBasket = basket.map (
-            item => {
-                if (item.id === id) return { ...item, quantity: parseInt(ev.target.value) };
-                return item;
+        const updatedBasket = basket.map (item => {
+            if (item.id === id) return { ...item, quantity: parseInt(ev.target.value) };
+            return item;
+        });
+        const changedItemQuantity = updatedBasket.filter(item => item.id === id)[0].quantity;
+        axiosClient.post(`/updateBasket/${id}`, { quantity: changedItemQuantity }).then(
+            ({data}) => {
+                if(data === 1) {
+                    setBasket(updatedBasket);
+                }
             }
-        );
-        setBasket(updatedBasket);
+        ).catch(
+            (err) => {
+                console.error(err);
+            }
+        )
     };
+
+    // Authentication Functions
+    const loginUserOne = () => {
+        const payload = {
+            email: "linda.hauck@example.net",
+            password: "password"
+        };
+        handleLogin(payload);
+    }
+    const loginUserTwo = () => {
+        const payload = {
+            email: "dkassulke@example.net",
+            password: "password"
+        };
+        handleLogin(payload);
+    }
+    const handleLogin = (payload) => {
+        axiosClient.post('/login', payload).then(
+            ({data}) => {
+                setUser(data.user);
+                setToken(data.token);
+            }
+        ).catch(
+            (err) => {
+                const response = err.response;
+                if(response && response.status === 422) {
+                    console.log(response.data.errors);
+                }
+            }
+        )
+    };
+    const handleLogout = () => {
+        axiosClient.post('/logout', user).then(
+            ({data}) => {
+                if(data === 1) {
+                    setUser(null);
+                    setToken(null);
+                }
+            }
+        ).catch(
+            (err) => {
+                const response = err.response;
+                if(response && response.status === 422) {
+                    console.log(response.data.errors);
+                }
+            }
+        )
+    }
+
+    useEffect(() => {
+        if(token !== null) {
+            axiosClient.get('/getBasket').then(
+                ({data}) => {
+                    setBasket(data);
+                }
+            ).catch(
+                (err) => {
+                    console.log(err);
+                }
+            )
+        }
+    }, [token, user]);
 
     return (
         <>
@@ -260,7 +341,7 @@ function App() {
                                                             <span>${product.price.toFixed(2)} x {product.quantity}</span>
                                                         </div>
                                                         <div className="cart-delete">
-                                                            <a href="#" onClick={() => handleRemoveItem(product.id)}>
+                                                            <a href="#" onClick={() => handleRemoveItem(event, product.id)}>
                                                                 <i className="ti-trash" />
                                                             </a>
                                                         </div>
@@ -448,16 +529,28 @@ function App() {
                 <div className="header-bottom-furniture wrapper-padding-2 border-top-3">
                     <div className="container-fluid">
                         <div className="furniture-bottom-wrapper">
-                            <div className="furniture-login">
-                                <ul>
-                                    <li>
-                                        Get Access: <a href="login.html">Login as User 1</a>
-                                    </li>
-                                    <li>
-                                        <a href="register.html">Login as User 2</a>
-                                    </li>
-                                </ul>
-                            </div>
+                            {
+                                token ? (
+                                    <div className="furniture-login">
+                                        <ul>
+                                            <li>
+                                                Access: <a href="#" onClick={handleLogout}>{user.name}</a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                ) : (
+                                    <div className="furniture-login">
+                                        <ul>
+                                            <li>
+                                                Get Access: <a href="#" onClick={loginUserOne}>Login as User 1</a>
+                                            </li>
+                                            <li>
+                                                <a href="#" onClick={loginUserTwo}>Login as User 2</a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                )
+                            }
                             <div className="furniture-search">
                                 <form action="">
                                     <input type="text" name="s" placeholder="I am Searching for . . ." />
@@ -508,26 +601,26 @@ function App() {
                             <h1 className="cart-heading">Cart</h1>
                             <form action="#">
                                 <div className="table-content table-responsive">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>remove</th>
-                                                <th>images</th>
-                                                <th>Product</th>
-                                                <th>Price</th>
-                                                <th>Quantity</th>
-                                                <th>Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {
-                                                basket.map(
+                                    {user && token ? (
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>remove</th>
+                                                    <th>images</th>
+                                                    <th>Product</th>
+                                                    <th>Price</th>
+                                                    <th>Quantity</th>
+                                                    <th>Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {basket.map(
                                                     (item, index) => {
                                                         return (
                                                             <tr id={"basket"} key={index}>
                                                                 <td className="product-remove">
                                                                     <button
-                                                                        onClick={() => handleRemoveItem(item.id)}
+                                                                        onClick={() => handleRemoveItem(event, item.id)}
                                                                         style={{background: "none", border: "none"}}
                                                                     >
                                                                         <i className="pe-7s-close" />
@@ -546,7 +639,7 @@ function App() {
                                                                 </td>
                                                                 <td className="product-quantity">
                                                                     <input
-                                                                        defaultValue={item.quantity}
+                                                                        value={item.quantity}
                                                                         onChange={() => handleChangeQuantity(event, item.id)}
                                                                         min={1}
                                                                         type={"number"}
@@ -558,10 +651,15 @@ function App() {
                                                             </tr>
                                                         );
                                                     }
-                                                )
-                                            }
-                                        </tbody>
-                                    </table>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    ) : (
+                                        <strong>
+                                            Please log in to see your cart...
+                                        </strong>
+                                    )
+                                }
                                 </div>
                                 <div className="row">
                                     <div className="col-lg-12 col-md-12 col-sm-12 col-xs-12">

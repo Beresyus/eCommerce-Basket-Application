@@ -1,6 +1,10 @@
+// React
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+// Page
 import App from './App.jsx'
+// Contexts
+import { ContextProvider } from "./contexts/ContextProvider.jsx";
 
 // CSS
 import "./assets/css/bootstrap.min.css";
@@ -16,7 +20,7 @@ import "./assets/css/style.css";
 import "./assets/css/responsive.css";
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
+  <ContextProvider>
     <App />
-  </React.StrictMode>,
+  </ContextProvider>
 )

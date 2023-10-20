@@ -10,4 +10,11 @@ class Product extends Model
     use HasFactory;
 
     public $timestamps = false;
+
+
+    public static $assets = [
+        "/src/assets/img/cart/1.jpg",
+        "/src/assets/img/cart/2.jpg",
+        "/src/assets/img/cart/3.jpg"
+    ];
 }
